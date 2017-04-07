@@ -1,0 +1,76 @@
+---
+output: html_document
+---
+Practical Machine Learning Prediction Assignment Writeup
+==========================================================
+
+#Background
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+#Data
+The training data for this project are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+The test data are available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+##Libraries and set seed for reproducibility
+```{r, warning=FALSE}
+library(knitr)
+library(caret)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+library(corrplot)
+set.seed(1121)
+```
+
+
+##Import Data
+```{r}
+setwd("E:/Dropbox/Dropbox/Data Science Courses/Data Science Specialization/08 - Practical Machine Learning")
+
+TrainSet <- read.csv("pmlTraining.csv", na.strings=c("#DIV/0!") )
+TestSet <- read.csv("pmlTesting.csv", na.strings=c("#DIV/0!") )
+
+dim(TrainSet)
+dim(TestSet)
+```
+
+##Pre-processing
+
+Remove variables with mostly missing values and/or having small variance.
+```{r}
+NearZeroVar <- nearZeroVar(TrainSet)
+TrainSet <- TrainSet[, -NearZeroVar]
+TestSet  <- TestSet[, -NearZeroVar]
+
+
+MostNA    <- sapply(TrainSet, function(x) mean(is.na(x))) > 0.95
+TrainSet <- TrainSet[, MostNA==FALSE]
+TestSet  <- TestSet[, MostNA==FALSE]
+
+
+TrainSet <- TrainSet[, -(1:5)]
+TestSet  <- TestSet[, -(1:5)]
+dim(TestSet)
+dim(TrainSet)
+```
+
+##Random Forest
+
+Random forest trees were generated for the training dataset using cross-validation.
+```{r}
+controlRF <- trainControl(method="cv", number=3, verboseIter=FALSE)
+modFitRandForest <- train(classe ~ ., data=TrainSet, method="rf",
+                          trControl=controlRF)
+modFitRandForest$finalModel
+```
+
+##Prediction
+
+Apply the random forest model from the previous step to the test dataset.
+```{r}
+predictTEST <- predict(modFitRandForest, newdata=TestSet)
+predictTEST
+```
